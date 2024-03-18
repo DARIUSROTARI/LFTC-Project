@@ -3,10 +3,11 @@
 
 #include "utils.h"
 #include "lexer.h"
+#include "parser.h"
 
-int main()
-{
-    char *inbuf = loadFile("tests/testlex.c");//se incarca continutul fisierului
+int main(){
+
+    char *inbuf = loadFile("tests2/testparser.c");//se incarca continutul fisierului
     
     Token *tokens = tokenize(inbuf);//returneaza lista de token-uri
 
@@ -14,5 +15,7 @@ int main()
 
     free(inbuf);//eliberam memoria alocata
 
+    parse(tokens);//parsam lista de tokeni
+    
     return 0;
 }
