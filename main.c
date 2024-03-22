@@ -11,7 +11,7 @@ int main(){
     
     Token *tokens = tokenize(inbuf);//returneaza lista de token-uri
 
-    showTokens(tokens);//afiseaza lista de token-uri
+    //showTokens(tokens);//afiseaza lista de token-uri
 
     free(inbuf);//eliberam memoria alocata
 
