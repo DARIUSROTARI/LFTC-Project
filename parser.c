@@ -88,8 +88,8 @@ bool structDef(){
                 if(consume(RACC)){
                     if(consume(SEMICOLON)){
                         return true;
-                    }else tkerr("lipseste ; dupa definirea intregii structuri");
-                }else tkerr("lipseste } dupa definirea structurii");
+                    }else tkerr("lipseste ; dupa definirea structurii");
+                }else tkerr("lipseste } la finalul structurii");
             }
         }else tkerr("lipseste numele structurii");
     }
@@ -109,7 +109,7 @@ bool varDef(){
             if(arrayDecl()){}
             if(consume(SEMICOLON)){
                 return true;
-            }
+            }else tkerr("lipseste ; dupa definirea variabilei");
         }else tkerr("lipseste numele variabilei");
     }
     iTk = start;
@@ -147,7 +147,7 @@ bool arrayDecl(){
         if(consume(INT)){} 
         if(consume(RBRACKET)){
             return true;
-        }else tkerr("lipseste ] de la declararea vectorului");
+        }else tkerr("lipseste ] la declararea vectorului");
     }
     iTk = start;
     return false;
@@ -177,7 +177,7 @@ bool fnDef(){
                     if(stmCompound()){
                         return true;
                     }else tkerr("lipseste corpul functiei");
-                }else tkerr("lipseste ) de la definirea functiei");
+                }else tkerr("lipseste ) la finalul functiei");
             }
         }else tkerr("lipseste numele functiei");
     }
@@ -300,7 +300,7 @@ bool exprAssign(){
         if(consume(ASSIGN)){
             if(exprAssign()){
                 return true;
-            }
+            }else tkerr("lipseste expresia dupa semnul =");
         }
         iTk = start;
     }
@@ -328,7 +328,7 @@ bool exprOrPrim(){
             if(exprOrPrim()){
                 return true;
             }
-        }else tkerr("lipseste operandul de dupa SAU");
+        }else tkerr("lipseste expresia de dupa ||");
     }
     return true;//epsilon
 }
@@ -363,7 +363,7 @@ bool exprAndPrim(){
             if(exprAndPrim()){
                 return true;
             }
-        }else tkerr("lipseste operandul de dupa SI");
+        }else tkerr("lipseste expresia de dupa &&");
     }
     return true; //epsilon
 }
@@ -398,7 +398,7 @@ bool exprEqPrim(){
             if(exprEqPrim()){
                 return true;
             }
-        }else tkerr("lipseste operandul de dupa '=' sau '!=' ");
+        }else tkerr("lipseste expresia de dupa == sau !=");
     }
     return true;//epsilon
 }
@@ -433,7 +433,7 @@ bool exprRelPrim(){
             if(exprRelPrim()){
                 return true;
             }
-        }else tkerr("lipseste operandul de dupa '<' sau '<=' sau '>' sau '>='");
+        }else tkerr("lipseste expresia de dupa < sau <= sau > sau >=");
     }
     return true;//epsilon
 }
@@ -468,7 +468,7 @@ bool exprAddPrim(){
             if(exprAddPrim()){
                 return true;
             }
-        }else tkerr("lipseste operandul de dupa semnul '+' sau '-'");
+        }else tkerr("lipseste expresia de dupa semnul + sau -");
     }
     return true;//epsilon
 }
@@ -503,7 +503,7 @@ bool exprMulPrim(){
             if(exprMulPrim()){
                 return true;
             }
-        }else tkerr("lipseste operandul de dupa semnul '*' sau '/'");
+        }else tkerr("lipseste expresia de dupa semnul * sau /");
     }
     return true;//epsilon
 }
@@ -534,7 +534,7 @@ bool exprCast(){
                     return true;
                 }
             }else tkerr("lipseste ) la Type Casting");
-        }
+        }else tkerr("lipseste expresia de dupa )");
     }
     if(exprUnary()){
         return true;
@@ -584,7 +584,7 @@ bool exprPostfixPrim(){
                 if(exprPostfixPrim()){
                     return true;
                 }
-            }else tkerr("lipseste ] a expresiei postfixate");
+            }else tkerr("lipseste ]");
         }
         iTk = start;
     }
@@ -652,8 +652,8 @@ bool exprPrimary(){
         if(expr()){
             if(consume(RPAR)){
                 return true;
-            }else tkerr("lipseste ) ce inchide expresia");
-        }
+            }else tkerr("lipseste ) la finalul expresiei");
+        }else tkerr("lipseste expresia");
     }
 
     iTk = start;
