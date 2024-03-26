@@ -169,7 +169,7 @@ bool fnDef(){
                     for(;;){
                         if(consume(COMMA)){
                             if(fnParam()){}
-                            else return false;
+                            else tkerr("lipseste parametrul functiei dupa ,");
                         }else break;
                     }
                 }
@@ -552,7 +552,7 @@ bool exprUnary(){
     if(consume(SUB) || consume(NOT)){
         if(exprUnary()){
             return true;
-        }else tkerr("lipseste celalat argument al expresiei unare");
+        }else tkerr("expresie invalida dupa - sau !");
     }
 
     if(exprPostfix()){
@@ -632,7 +632,7 @@ bool exprPrimary(){
                 }
             }
             if(consume(RPAR)){}
-            else tkerr("lipseste ) ce inchide expresia");
+            else tkerr("lipseste ) in apelul functiei");
         }
         return true;
     }
