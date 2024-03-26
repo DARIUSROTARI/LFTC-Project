@@ -1,13 +1,13 @@
 struct Pt{
 	int x;
 	int y;
-	};
+};
 struct Pt points[10];
 
-double max(double a,double b){
+double max(double a , double b){
 	if(a>b)return a;
 		else return b;
-	}
+}
 
 int len(char s[]){
 	int i;
@@ -22,6 +22,6 @@ void main(){
 	while(i!=0){
 		puti(i);
 		i=i/2;
-		}
 	}
+}
 	

@@ -251,11 +251,17 @@ bool stm(){
         }else tkerr("lipseste ; dupa return");
         iTk = start;
     }
-    if(expr()){}
+  
+    if(expr()){
+        if(consume(SEMICOLON)){
+            return true;
+        }else{
+            tkerr("lipseste ;");
+        }
+    }
     if(consume(SEMICOLON)){
         return true;
-    }              
-            
+    }       
     iTk = start;
     return false;
 }
@@ -532,9 +538,9 @@ bool exprCast(){
             if(consume(RPAR)){
                 if(exprCast()){
                     return true;
-                }
+                }else tkerr("lipseste expresia de la Type Cast");
             }else tkerr("lipseste ) la Type Casting");
-        }else tkerr("lipseste expresia de dupa )");
+        }
     }
     if(exprUnary()){
         return true;
