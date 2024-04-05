@@ -4,10 +4,11 @@
 #include "utils.h"
 #include "lexer.h"
 #include "parser.h"
+#include "ad.h"
 
 int main(){
 
-    char *inbuf = loadFile("tests2/testparser.c");//se incarca continutul fisierului
+    char *inbuf = loadFile("tests_ad/testad.c");//se incarca continutul fisierului
     
     Token *tokens = tokenize(inbuf);//returneaza lista de token-uri
 
@@ -15,7 +16,13 @@ int main(){
 
     free(inbuf);//eliberam memoria alocata
 
+    pushDomain();
+
     parse(tokens);//parsam lista de tokeni
+
+    showDomain(symTable,"global");
+
+    dropDomain();
     
     return 0;
 }

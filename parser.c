@@ -5,20 +5,24 @@
 
 #include "parser.h"
 #include "lexer.h"
+#include "ad.h"
+#include "utils.h"
 
 Token *iTk;//the iterator in the tokens list
 Token *consumedTk;//the last consumed token
+
+Symbol* owner = NULL;
 
 //declararea functiilor
 bool unit();
 bool structDef();
 bool varDef();
-bool typeBase();
-bool arrayDecl();
+bool typeBase(Type *t);
+bool arrayDecl(Type *t);
 bool fnDef();
 bool fnParam();
 bool stm();
-bool stmCompound();
+bool stmCompound(bool newDomain);
 bool expr();
 bool exprAssign();
 bool exprOr();
@@ -80,13 +84,24 @@ bool structDef(){
     
     if(consume(STRUCT)){
         if(consume(ID)){
+            Token *tkName = consumedTk;
             if(consume(LACC)){
+                Symbol *s=findSymbolInDomain(symTable,tkName->text);
+                if(s)tkerr("symbol redefinition: %s",tkName->text);
+                s=addSymbolToDomain(symTable,newSymbol(tkName->text,SK_STRUCT));
+                s->type.tb=TB_STRUCT;
+                s->type.s=s;
+                s->type.n=-1;
+                pushDomain();
+                owner=s;
                 for(;;){
                     if(varDef()){}
                     else break;
                 }
                 if(consume(RACC)){
                     if(consume(SEMICOLON)){
+                        owner=NULL;
+                        dropDomain();
                         return true;
                     }else tkerr("lipseste ; dupa definirea structurii");
                 }else tkerr("lipseste } la finalul structurii");
@@ -103,11 +118,36 @@ bool structDef(){
 bool varDef(){
     //printf("#varDef %d\n",iTk->line);
     Token *start = iTk;
+    Type t; 
 
-    if(typeBase()){
+    if(typeBase(&t)){
         if(consume(ID)){
-            if(arrayDecl()){}
+            Token *tkName = consumedTk;
+            if(arrayDecl(&t)){
+                if(t.n==0)tkerr("a vector variable must have a specified dimension");
+            }
             if(consume(SEMICOLON)){
+                Symbol *var=findSymbolInDomain(symTable,tkName->text);
+                if(var)tkerr("symbol redefinition: %s",tkName->text);
+                var=newSymbol(tkName->text,SK_VAR);
+                var->type=t;
+                var->owner=owner;
+                addSymbolToDomain(symTable,var);
+                if(owner){
+                    switch(owner->kind){
+                    case SK_FN:
+                        var->varIdx=symbolsLen(owner->fn.locals);
+                        addSymbolToList(&owner->fn.locals,dupSymbol(var));
+                        break;
+                    case SK_STRUCT:
+                        var->varIdx=typeSize(&owner->type);
+                        addSymbolToList(&owner->structMembers,dupSymbol(var));
+                        break;
+                    default : break;
+                    }
+                }else{
+                    var->varMem=safeAlloc(typeSize(&t));
+                }
                 return true;
             }else tkerr("lipseste ; dupa definirea variabilei");
         }else tkerr("lipseste numele variabilei");
@@ -117,20 +157,28 @@ bool varDef(){
 }
 
 // typeBase: TYPE_INT | TYPE_DOUBLE | TYPE_CHAR | STRUCT ID
-bool typeBase(){//atomi lexicali - folosim consume()
+bool typeBase(Type *t){
     //printf("#typeBase %d\n",iTk->line);
+    t->n=-1;
     Token *start = iTk;//tinem minte iteratorul la inceputul fiecarei reguli
 	if(consume(TYPE_INT)){//daca la pozitia curenta avem "int", il consuma si trece mai departe
+        t->tb=TB_INT;
 		return true;
     }
 	if(consume(TYPE_DOUBLE)){//daca la pozitia curenta avem "double", il consuma si trece mai departe
+        t->tb=TB_DOUBLE;
 		return true;
     }
 	if(consume(TYPE_CHAR)){//daca la pozitia curenta avem "char", il consuma si trece mai departe
+        t->tb=TB_CHAR;
 		return true;
     }
 	if(consume(STRUCT)){//daca la pozitia curenta avem "struct", il consuma si trece mai departe
 		if(consume(ID)){//id-ul de la struct
+            Token *tkName = consumedTk;
+            t->tb=TB_STRUCT;
+            t->s=findSymbol(tkName->text);
+            if(!t->s) tkerr("structura nedefinita: %s",tkName->text);
 			return true;
         }else tkerr("lipseste numele structurii");
     }
@@ -139,17 +187,18 @@ bool typeBase(){//atomi lexicali - folosim consume()
 }
 
 // arrayDecl: LBRACKET INT? RBRACKET
-bool arrayDecl(){
-    //printf("#arrayDecl %d\n",iTk->line);
-    Token *start = iTk;
-
+bool arrayDecl(Type *t){
     if(consume(LBRACKET)){
-        if(consume(INT)){} 
+        if(consume(INT)){
+            Token *tkSize=consumedTk;
+            t->n=tkSize->i;
+        }else{
+            t->n=0; // array fara dimensiune: int v[]
+        }
         if(consume(RBRACKET)){
             return true;
-        }else tkerr("lipseste ] la declararea vectorului");
+        }else tkerr("missing ] or invalid expression inside [...]");
     }
-    iTk = start;
     return false;
 }
 
@@ -161,10 +210,19 @@ stmCompound
 bool fnDef(){
     //printf("#fnDef %d\n",iTk->line);
     Token *start = iTk;
+    Type t;
 
-    if(typeBase() || consume(VOID)){
+    if(typeBase(&t)){
         if(consume(ID)){
+            Token *tkName = consumedTk;
             if(consume(LPAR)){
+                Symbol *fn=findSymbolInDomain(symTable,tkName->text);
+                if(fn)tkerr("symbol redefinition: %s",tkName->text);
+                fn=newSymbol(tkName->text,SK_FN);
+                fn->type=t;
+                addSymbolToDomain(symTable,fn);
+                owner=fn;
+                pushDomain();
                 if(fnParam()){
                     for(;;){
                         if(consume(COMMA)){
@@ -174,9 +232,40 @@ bool fnDef(){
                     }
                 }
                 if(consume(RPAR)){
-                    if(stmCompound()){
+                    if(stmCompound(false)){
+                        dropDomain();
+                        owner=NULL;
                         return true;
-                    }else tkerr("lipseste corpul functiei");
+                    }tkerr("lipseste corpul functiei");
+                }else tkerr("lipseste ) la finalul functiei");
+            }
+        }else tkerr("lipseste numele functiei");
+    }else if(consume(VOID)){
+        t.tb=TB_VOID;
+        if(consume(ID)){
+            Token *tkName = consumedTk;
+            if(consume(LPAR)){
+                Symbol *fn=findSymbolInDomain(symTable,tkName->text);
+                if(fn)tkerr("symbol redefinition: %s",tkName->text);
+                fn=newSymbol(tkName->text,SK_FN);
+                fn->type=t;
+                addSymbolToDomain(symTable,fn);
+                owner=fn;
+                pushDomain();
+                if(fnParam()){
+                    for(;;){
+                        if(consume(COMMA)){
+                            if(fnParam()){}
+                            else tkerr("lipseste parametrul functiei dupa ,");
+                        }else break;
+                    }
+                }
+                if(consume(RPAR)){
+                    if(stmCompound(false)){
+                        dropDomain();
+                        owner=NULL;
+                        return true;
+                    }tkerr("lipseste corpul functiei");
                 }else tkerr("lipseste ) la finalul functiei");
             }
         }else tkerr("lipseste numele functiei");
@@ -189,10 +278,23 @@ bool fnDef(){
 bool fnParam(){
     //printf("#fnParam %d\n",iTk->line);
     Token *start = iTk;
+    Type t;
 
-    if(typeBase()){
+    if(typeBase(&t)){
         if(consume(ID)){
-            if(arrayDecl()){}
+            Token *tkName = consumedTk;
+            if(arrayDecl(&t)){
+                t.n=0;
+            }
+            Symbol *param=findSymbolInDomain(symTable,tkName->text);
+            if(param)tkerr("symbol redefinition: %s",tkName->text);
+            param=newSymbol(tkName->text,SK_PARAM);
+            param->type=t;
+            param->owner=owner;
+            param->paramIdx=symbolsLen(owner->fn.params);
+            // parametrul este adaugat atat la domeniul curent, cat si la parametrii fn
+            addSymbolToDomain(symTable,param);
+            addSymbolToList(&owner->fn.params,dupSymbol(param));
             return true;
         }else tkerr("lipseste numele parametrului functiei");
     }
@@ -211,7 +313,7 @@ bool stm(){
     //printf("#stm %d\n",iTk->line);
     Token *start = iTk;
 
-    if(stmCompound()){
+    if(stmCompound(true)){
         return true;
     }
     if(consume(IF)){
@@ -267,16 +369,18 @@ bool stm(){
 }
 
 // stmCompound: LACC ( varDef | stm )* RACC
-bool stmCompound(){
+bool stmCompound(bool newDomain){
     //printf("#stmCompound %d\n",iTk->line);
     Token *start = iTk;
 
     if(consume(LACC)){
+        if(newDomain)pushDomain();
         for(;;){
             if(varDef() || stm()){}
             else break;
         }
         if(consume(RACC)){
+            if(newDomain)dropDomain();
             return true;
         }else tkerr("lipseste } la inchiderea blocului");
 
@@ -533,8 +637,9 @@ bool exprCast(){
     Token *start = iTk;
 
     if(consume(LPAR)){
-        if(typeBase()){
-            if(arrayDecl()){}
+        Type t;
+        if(typeBase(&t)){
+            if(arrayDecl(&t)){}
             if(consume(RPAR)){
                 if(exprCast()){
                     return true;
@@ -673,13 +778,3 @@ void parse(Token *tokens){
 
 //return true :  daca regula a fost indeplinita (daca am ajuns la captul ei, inclusiv END)
 //return false : daca regula nu a fost indeplinita
-
-/*MESAJE DE EROARE : 2 FORMULARI
-if(<b) => lipseste conditia if-ului (PROST?!?)
-       => conditie if invalida (BETTER)
-
-if a<b) => liseste ( dupa if
-
-MESAJ DE EROARE SPECIFIC, FARA NUME DE REGULI,ATENTIE CAND FOLOSIM "LIPSESTE" SAU "CONSTRUCTIE ERONATA"
-
-*/
