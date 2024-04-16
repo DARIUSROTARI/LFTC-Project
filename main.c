@@ -5,10 +5,11 @@
 #include "lexer.h"
 #include "parser.h"
 #include "ad.h"
+#include "at.h"
 
 int main(){
 
-    char *inbuf = loadFile("tests_ad/testad.c");//se incarca continutul fisierului
+    char *inbuf = loadFile("tests_at/testat.c");//se incarca continutul fisierului
     
     Token *tokens = tokenize(inbuf);//returneaza lista de token-uri
 
