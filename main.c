@@ -19,9 +19,15 @@ int main(){
 
     pushDomain();
 
+    vmInit();//initializare masina virtuala
+
     parse(tokens);//parsam lista de tokeni
 
-    showDomain(symTable,"global");
+    //showDomain(symTable,"global");
+
+    Instr *testCode = genTestProgram();//genereaza cod de test pentru masina virtuala
+
+    run(testCode);//executie cod masina virtuala
 
     dropDomain();
     
