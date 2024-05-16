@@ -9,13 +9,11 @@
 
 int main(){
 
-    char *inbuf = loadFile("tests_at/testat.c");//se incarca continutul fisierului
+    char *inbuf = loadFile("tests_gc/testgc.c");//se incarca continutul fisierului
     
     Token *tokens = tokenize(inbuf);//returneaza lista de token-uri
 
     //showTokens(tokens);//afiseaza lista de token-uri
-
-    free(inbuf);//eliberam memoria alocata
 
     pushDomain();
 
@@ -23,13 +21,30 @@ int main(){
 
     parse(tokens);//parsam lista de tokeni
 
-    //showDomain(symTable,"global");
+//MASINA VIRTUALA:
 
-    Instr *testCode = genTestProgram();//genereaza cod de test pentru masina virtuala
+    Instr *testCode = genTestProgramForMV();//genereaza cod de test pentru masina virtuala
 
     run(testCode);//executie cod masina virtuala
 
+    printf("\n\n\n");
+
+//GENERAREA DE COD:
+
+    Symbol *symMain=findSymbolInDomain(symTable,"main");
+
+    if(!symMain)err("missing main function");
+
+    Instr *entryCode=NULL;
+    addInstr(&entryCode,OP_CALL)->arg.instr=symMain->fn.instr;
+    addInstr(&entryCode,OP_HALT);
+    run(entryCode);
+
+    //showDomain(symTable,"global");
+
     dropDomain();
     
+    free(inbuf);//eliberam memoria alocata
+
     return 0;
 }
