@@ -98,5 +98,6 @@ void run(Instr *IP);
 
 // generates a test program
 Instr *genTestProgram();
-Instr *genTestProgramForMV();
 
+// generates a test program for VM
+Instr *genTestProgramForMV();

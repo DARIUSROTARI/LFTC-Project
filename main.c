@@ -15,7 +15,7 @@ int main(){
 
     //showTokens(tokens);//afiseaza lista de token-uri
 
-    pushDomain();
+    pushDomain();//se creeaza domeniul global
 
     vmInit();//initializare masina virtuala
 
